@@ -19,7 +19,12 @@ def pred_log(logreg, X_train, y_train, X_test, flag=False):
     :return: A two elements tuple containing the predictions and the weightning matrix
     """
     # ------------------ IMPLEMENT YOUR CODE HERE:-----------------------------
-
+    lr = logreg.fit(X_train, y_train)
+    w_log = lr.coef_
+    if flag:
+        y_pred_log = logreg.predict_proba(X_test) #the predicted probabilities of the classes
+    else:
+        y_pred_log = logreg.predict(X_test) #the predicted classes
     # -------------------------------------------------------------------------
     return y_pred_log, w_log
 
@@ -83,7 +88,18 @@ def cv_kfold(X, y, C, penalty, K, mode):
             for train_idx, val_idx in kf.split(X, y):
                 x_train, x_val = X.iloc[train_idx], X.iloc[val_idx]
         # ------------------ IMPLEMENT YOUR CODE HERE:-----------------------------
-
+                y_train, y_val = y[train_idx], y[val_idx]
+            
+                x_train_norm = nsd(x_train, mode=mode, flag=False)
+                x_val_norm = nsd(x_val, mode=mode, flag=False)
+                
+                y_pred, w = pred_log(logreg, x_train_norm, y_train, x_val_norm, flag=True)
+                loss = log_loss(y_val,y_pred)
+                loss_val_vec = np.append(loss_val_vec, loss)
+                
+            mu = np.mean(loss_val_vec)
+            sigma = np.std(loss_val_vec)
+            validation_dict.append({'C':c, 'penalty':p, 'mu':mu, 'sigma':sigma})
         # --------------------------------------------------------------------------
     return validation_dict
 
@@ -92,13 +108,19 @@ def odds_ratio(w, X, selected_feat='LB'):
     """
 
     :param w: the learned weights of the non normalized/standardized data
-    :param x: the set of the relevant features-patients data
+    :param X: the set of the relevant features-patients data
     :param selected_feat: the current feature
     :return: odds: median odds of all patients for the selected feature and label
              odds_ratio: the odds ratio of the selected feature and label
     """
     # ------------------ IMPLEMENT YOUR CODE HERE:-----------------------------
+    label = 0 #0 for normal label
+    column_index = X.columns.get_loc(selected_feat)
+    
+    p = 1/(1+np.exp(-X.dot(w[label,:])))
+    odds = np.median(p/(1-p))
 
+    odd_ratio = np.exp(w[label,column_index])
     # --------------------------------------------------------------------------
 
     return odds, odd_ratio
